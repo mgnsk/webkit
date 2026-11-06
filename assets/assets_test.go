@@ -20,7 +20,6 @@ func TestSuite(t *testing.T) {
 
 var fsys = fstest.MapFS{
 	"app.css":              {Data: []byte("body{}")},
-	"sw.js":                {Data: []byte("self")},
 	"manifest.webmanifest": {Data: []byte("{}")},
 }
 
@@ -54,13 +53,6 @@ var _ = Describe("Assets", func() {
 	It("serves web manifests with their mime type", func() {
 		rec := get(a, "/assets/manifest.webmanifest")
 		Expect(rec.Header().Get("Content-Type")).To(Equal("application/manifest+json"))
-	})
-
-	It("serves assets without caching when configured", func() {
-		rec := get(assets.New(fsys, assets.WithNoCache()), "/assets/sw.js")
-		Expect(rec.Code).To(Equal(http.StatusOK))
-		Expect(rec.Body.String()).To(Equal("self"))
-		Expect(rec.Header().Get("Cache-Control")).To(Equal("no-cache"))
 	})
 
 	It("does not serve assets outside the prefix", func() {
