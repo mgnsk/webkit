@@ -46,6 +46,13 @@ func (k ContextKey[T]) Get(ctx context.Context) *T {
 	return v
 }
 
+// Lookup returns the value from ctx and whether it was set, which tells a
+// value set to nil apart from an unset one.
+func (k ContextKey[T]) Lookup(ctx context.Context) (*T, bool) {
+	v, ok := ctx.Value(k).(*T)
+	return v, ok
+}
+
 // With returns a copy of ctx with value v.
 func (k ContextKey[T]) With(ctx context.Context, v *T) context.Context {
 	return context.WithValue(ctx, k, v)

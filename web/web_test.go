@@ -187,6 +187,15 @@ var _ = Describe("ContextKey", func() {
 		Expect(web.ContextKey[other]{}.Get(ctx)).To(BeNil())
 		Expect(web.ContextKey[user]{}.Get(context.Background())).To(BeNil())
 	})
+
+	It("tells nil values apart from unset ones", func() {
+		_, ok := web.ContextKey[user]{}.Lookup(context.Background())
+		Expect(ok).To(BeFalse())
+
+		v, ok := web.ContextKey[user]{}.Lookup(web.ContextKey[user]{}.With(context.Background(), nil))
+		Expect(ok).To(BeTrue())
+		Expect(v).To(BeNil())
+	})
 })
 
 var _ = Describe("Decode", func() {
