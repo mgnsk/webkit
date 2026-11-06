@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/mgnsk/webkit"
 	"github.com/mgnsk/webkit/sqlite"
@@ -68,19 +67,17 @@ var _ = Describe("WithErrorChecking", func() {
 	})
 })
 
-var _ = Describe("RunOptimizer", func() {
-	It("optimizes FTS tables and stops with the context", func(ctx SpecContext) {
-		runCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-		defer cancel()
-		Expect(sqlite.RunOptimizer(runCtx, db.DB, "docs_fts")).To(Succeed())
-	}, SpecTimeout(5*time.Second))
+var _ = Describe("Optimize", func() {
+	It("optimizes FTS tables", func() {
+		Expect(sqlite.Optimize(context.Background(), db.DB, "docs_fts")).To(Succeed())
+	})
 
 	It("rejects invalid table names", func() {
-		Expect(sqlite.RunOptimizer(context.Background(), db.DB, `x"; DROP TABLE parents; --`)).
+		Expect(sqlite.Optimize(context.Background(), db.DB, `x"; DROP TABLE parents; --`)).
 			To(MatchError(ContainSubstring("invalid FTS table name")))
 	})
 
 	It("fails on unknown tables", func() {
-		Expect(sqlite.RunOptimizer(context.Background(), db.DB, "missing")).To(HaveOccurred())
+		Expect(sqlite.Optimize(context.Background(), db.DB, "missing")).To(HaveOccurred())
 	})
 })
