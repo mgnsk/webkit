@@ -85,8 +85,8 @@ func run() error {
 
 	sm := session.New(store, session.Options{Secure: true})
 
-	// Middleware for pages that need a signed-in user.
-	private := []web.Middleware{
+	// Public pages load the session and the user, if signed in.
+	public := []web.Middleware{
 		session.Middleware(sm),
 		session.LoadUser(sm, userKey, func(ctx context.Context, sm *scs.SessionManager) (*User, error) {
 			id := sm.GetInt64(ctx, "user_id")
@@ -95,8 +95,11 @@ func run() error {
 			}
 			return GetUser(ctx, db, id) // webkit.NotFound signs the user out
 		}, "/login"),
-		session.RequireUser(userKey, "/login"),
 	}
+
+	// Private pages also require a signed-in user. Anonymous visitors are
+	// redirected to /login, which must therefore be public.
+	private := append(slices.Clone(public), session.RequireUser(userKey, "/login"))
 
 	h := web.NewHandler(web.Options{
 		Errors: web.ErrorRenderer{
@@ -107,7 +110,9 @@ func run() error {
 	},
 		static.Register,
 		func(mux *http.ServeMux) {
-			mux.Handle("GET /", web.Chain(http.HandlerFunc(home), private...))
+			mux.Handle("GET /login", web.Chain(http.HandlerFunc(loginPage), public...))
+			mux.Handle("POST /login", web.Chain(http.HandlerFunc(login), public...))
+			mux.Handle("GET /{$}", web.Chain(http.HandlerFunc(home), private...))
 		},
 	)
 
@@ -119,6 +124,16 @@ func run() error {
 		}),
 	)
 }
+```
+
+The `login` handler signs the user in by storing their ID in the session:
+
+```go
+if err := sm.RenewToken(r.Context()); err != nil {
+	panic(err)
+}
+sm.Put(r.Context(), "user_id", user.ID)
+web.Redirect(w, r, "/")
 ```
 
 A handler decodes its input, panics on errors and renders a page or a
