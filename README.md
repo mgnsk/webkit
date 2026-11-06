@@ -15,8 +15,7 @@ page (or an htmx toast) with the status code taken from the error.
 | `web` | `NewHandler`, middleware (`Chain`, `Recover`, `Logger`, `CrossOrigin`, `Timeout`), `Render`, htmx-aware `Redirect`, `Decode` (httpin), typed `ContextKey` |
 | `session` | scs session manager, flash messages, `LoadUser` / `RequireUser` |
 | `assets` | Embedded static assets with CRC cache-busting paths |
-| `sqlite` | bun SQLite client, error normalization, periodic optimizer |
-| `migrate` | golang-migrate up/down from an `fs.FS` |
+| `sqlite` | bun SQLite client, error normalization, periodic optimizer, migrations from an `fs.FS` |
 | `snowflake` | Snowflake IDs |
 | `app` | Run a server with background tasks and graceful shutdown |
 | `testutil` | ginkgo `Must` helpers |

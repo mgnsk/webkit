@@ -33,7 +33,7 @@ func get(a *assets.Assets, target string) *httptest.ResponseRecorder {
 }
 
 var _ = Describe("Assets", func() {
-	a := assets.New(fsys, assets.WithRootFile("sw.js"))
+	a := assets.New(fsys)
 
 	It("returns cache-busting paths", func() {
 		Expect(a.Path("app.css")).To(Equal(fmt.Sprintf("/assets/app.css?crc=%d", crc32.ChecksumIEEE([]byte("body{}")))))
@@ -56,15 +56,14 @@ var _ = Describe("Assets", func() {
 		Expect(rec.Header().Get("Content-Type")).To(Equal("application/manifest+json"))
 	})
 
-	It("serves root files without caching", func() {
-		rec := get(a, "/sw.js")
+	It("serves assets without caching when configured", func() {
+		rec := get(assets.New(fsys, assets.WithNoCache()), "/assets/sw.js")
 		Expect(rec.Code).To(Equal(http.StatusOK))
 		Expect(rec.Body.String()).To(Equal("self"))
 		Expect(rec.Header().Get("Cache-Control")).To(Equal("no-cache"))
-		Expect(rec.Header().Get("Content-Type")).To(Equal("text/javascript; charset=utf-8"))
 	})
 
-	It("does not serve root files that are not registered", func() {
+	It("does not serve assets outside the prefix", func() {
 		Expect(get(a, "/app.css").Code).To(Equal(http.StatusNotFound))
 	})
 

@@ -1,5 +1,4 @@
-// Package migrate runs SQLite schema migrations from a filesystem.
-package migrate
+package sqlite
 
 import (
 	"database/sql"
@@ -12,9 +11,9 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
-// Up runs the up migrations in dir of fsys.
-func Up(db *sql.DB, fsys fs.FS, dir string) error {
-	return run(db, fsys, dir, func(m *migrate.Migrate) error {
+// MigrateUp runs the up migrations in dir of fsys.
+func MigrateUp(db *sql.DB, fsys fs.FS, dir string) error {
+	return runMigrate(db, fsys, dir, func(m *migrate.Migrate) error {
 		if err := m.Up(); err != nil {
 			if errors.Is(err, migrate.ErrNoChange) {
 				slog.Info("migrations already up to date")
@@ -26,14 +25,14 @@ func Up(db *sql.DB, fsys fs.FS, dir string) error {
 	})
 }
 
-// Down runs the down migrations in dir of fsys.
-func Down(db *sql.DB, fsys fs.FS, dir string) error {
-	return run(db, fsys, dir, func(m *migrate.Migrate) error {
+// MigrateDown runs the down migrations in dir of fsys.
+func MigrateDown(db *sql.DB, fsys fs.FS, dir string) error {
+	return runMigrate(db, fsys, dir, func(m *migrate.Migrate) error {
 		return m.Down()
 	})
 }
 
-func run(db *sql.DB, fsys fs.FS, dir string, f func(*migrate.Migrate) error) error {
+func runMigrate(db *sql.DB, fsys fs.FS, dir string, f func(*migrate.Migrate) error) error {
 	sourceInstance, err := iofs.New(fsys, dir)
 	if err != nil {
 		return err
