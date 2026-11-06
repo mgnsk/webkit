@@ -68,16 +68,44 @@ var _ = Describe("WithErrorChecking", func() {
 })
 
 var _ = Describe("Optimize", func() {
-	It("optimizes FTS tables", func() {
-		Expect(sqlite.Optimize(context.Background(), db.DB, "docs_fts")).To(Succeed())
+	segments := func(table string) int {
+		GinkgoHelper()
+		var n int
+		Expect(db.QueryRow(`SELECT count(*) FROM "` + table + `_data"`).Scan(&n)).To(Succeed())
+		return n
+	}
+
+	insertSeparately := func(table string) {
+		GinkgoHelper()
+		for _, body := range []string{"one", "two", "three"} {
+			_, err := db.Exec(`INSERT INTO "`+table+`" (body) VALUES (?)`, body)
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
+
+	It("merges the segments of all FTS5 tables", func() {
+		_, err := db.Exec(`
+			create virtual table "we""ird" using FTS5(body);
+			CREATE VIRTUAL TABLE other_fts USING fts5(body, content='');
+		`)
+		Expect(err).NotTo(HaveOccurred())
+
+		for _, table := range []string{"docs_fts", `we""ird`} {
+			insertSeparately(table)
+		}
+
+		before := segments("docs_fts")
+		beforeWeird := segments(`we""ird`)
+
+		Expect(sqlite.Optimize(context.Background(), db.DB)).To(Succeed())
+
+		Expect(segments("docs_fts")).To(BeNumerically("<", before))
+		Expect(segments(`we""ird`)).To(BeNumerically("<", beforeWeird))
 	})
 
-	It("rejects invalid table names", func() {
-		Expect(sqlite.Optimize(context.Background(), db.DB, `x"; DROP TABLE parents; --`)).
-			To(MatchError(ContainSubstring("invalid FTS table name")))
-	})
-
-	It("fails on unknown tables", func() {
-		Expect(sqlite.Optimize(context.Background(), db.DB, "missing")).To(HaveOccurred())
+	It("succeeds without FTS5 tables", func() {
+		_, err := db.Exec(`DROP TABLE docs_fts`)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(sqlite.Optimize(context.Background(), db.DB)).To(Succeed())
 	})
 })
