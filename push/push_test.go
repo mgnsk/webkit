@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/mgnsk/webkit/push"
+	"github.com/mgnsk/webkit/snowflake"
 	"github.com/mgnsk/webkit/sqlite"
 	. "github.com/mgnsk/webkit/testutil"
 	"github.com/mgnsk/webkit/web"
@@ -46,6 +47,10 @@ CREATE TABLE vapid_keys (
 `
 
 var db *bun.DB
+
+// namedID is a named user ID type from another package, like
+// snowflake.ID.
+type namedID = snowflake.ID
 
 var _ = BeforeEach(func() {
 	db = sqlite.NewDB(":memory:").Connect()
@@ -116,6 +121,14 @@ var _ = Describe("Service", func() {
 		Expect(s.Unsubscribe(ctx, 2, "https://web.push.apple.com/a")).To(Succeed())
 		Expect(Must(s.Subscriptions(ctx, 2))).To(BeEmpty())
 		Expect(Must(s.Subscriptions(ctx))).To(BeEmpty())
+	})
+
+	It("supports named user ID types", func(ctx SpecContext) {
+		s := Must(push.New[namedID](ctx, db, push.Options{}))
+		Expect(s.Subscribe(ctx, &push.Subscription[namedID]{Endpoint: "https://web.push.apple.com/a", UserID: 1})).To(Succeed())
+		Expect(Must(s.Subscriptions(ctx, 1))).To(HaveLen(1))
+		Expect(s.Unsubscribe(ctx, 1, "https://web.push.apple.com/a")).To(Succeed())
+		Expect(Must(s.Subscriptions(ctx, 1))).To(BeEmpty())
 	})
 
 	It("sends encrypted notifications and drops expired subscriptions", func(ctx SpecContext) {

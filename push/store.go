@@ -21,7 +21,9 @@ type Subscription[K comparable] struct {
 	// subscribed.
 	CreatedAt int64 `bun:"created_at"`
 
-	bun.BaseModel `bun:"push_subscriptions"`
+	// The alias is explicit: bun derives the default from the type name,
+	// which for a named K such as snowflake.ID contains a package path.
+	bun.BaseModel `bun:"push_subscriptions,alias:push_subscriptions"`
 }
 
 // VAPIDKeys is the server's VAPID key pair, stored as the only row of the
