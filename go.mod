@@ -3,6 +3,7 @@ module github.com/mgnsk/webkit
 go 1.26.0
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/ggicci/httpin v0.20.5
@@ -31,6 +32,7 @@ require (
 	github.com/ggicci/owl v0.8.2 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20261105003125-4bf881d7fb0b // indirect
 	github.com/google/uuid v1.6.0 // indirect

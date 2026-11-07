@@ -23,6 +23,8 @@ Each package can be used on its own; take only what you need.
 | `assets` | Embedded static assets served with long-lived caching and checksum cache-busting paths |
 | `sqlite` | bun SQLite client, error normalization, `Optimize`, `MigrateUp` / `MigrateDown` from an `fs.FS` |
 | `snowflake` | Snowflake IDs |
+| `pwa` | Installable app: web app manifest, offline service worker and the client push API |
+| `push` | Web Push notifications: VAPID keys, subscription endpoints and background delivery |
 | `app` | Run an HTTP server with background tasks and graceful shutdown |
 | `testutil` | [Ginkgo](https://onsi.github.io/ginkgo/) `Must` helpers |
 
@@ -163,6 +165,55 @@ func createGroup(w http.ResponseWriter, r *http.Request) {
 `web.Redirect` sets `HX-Redirect` for htmx requests and responds with a
 303 otherwise. Reference assets in views with `static.Path("app.css")`, which
 returns `/assets/app.css?crc=<checksum>`.
+
+## Installable app and push notifications
+
+`pwa` serves the manifest at `/manifest.webmanifest`, a service worker at
+`/sw.js` and a client script at `/pwa.js`. `push` stores subscriptions and
+sends notifications to the users' devices. It uses the `push_subscriptions`
+and `vapid_keys` tables, which the app creates in its own migrations; the
+package documentation has an example schema.
+
+```go
+app := pwa.New(pwa.Options{
+	Manifest: pwa.Manifest{
+		Name:  "Example",
+		Icons: []pwa.Icon{{Src: static.Path("icon-192.png"), Sizes: "192x192", Type: "image/png"}},
+	},
+	OfflinePage: "/assets/offline.html",
+})
+
+notifier, err := push.New[int64](ctx, db, push.Options{Subscriber: "admin@example.com"})
+if err != nil {
+	return err
+}
+defer notifier.Wait()
+
+h := web.NewHandler(opts,
+	static.Register,
+	app.Register,
+	func(mux *http.ServeMux) {
+		notifier.Register(mux, func(r *http.Request) int64 {
+			return userKey.Get(r.Context()).ID
+		}, private...)
+	},
+)
+
+// Later, in a handler:
+notifier.Notify(r.Context(), []int64{friend.ID}, push.Message{
+	Title: "Example",
+	Body:  "You have a new friend",
+	URL:   "/friends",
+})
+```
+
+Pages link `app.ManifestPath()` and load `app.ScriptPath()`. The script
+exposes `window.webkit.push` for the app's own notification settings UI:
+
+```js
+const device = await webkit.push.device(); // null without push support
+button.addEventListener("click", () => device.subscribe());
+```
 
 ## Middleware order
 
