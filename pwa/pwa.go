@@ -35,8 +35,10 @@
 //     the signed-in user.
 //   - device.unsubscribe() unsubscribes this device.
 //   - sync() stores this device's subscription for the signed-in user once
-//     per browser session, e.g. after signing in as another user or when the
-//     browser rotated the subscription.
+//     per browser session and subscription endpoint, e.g. after signing in
+//     as another user or when the browser rotated the subscription. The
+//     service worker also stores a rotated subscription by itself, while
+//     the app is closed.
 //   - unsubscribe() unsubscribes this device, giving up after 3 seconds. Call
 //     it before signing out.
 package pwa

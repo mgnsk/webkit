@@ -53,6 +53,38 @@ self.addEventListener("push", (event) => {
   );
 });
 
+// The push service expired or rotated the subscription, e.g. while the app
+// was not opened for a while. Subscribe again and store the new subscription
+// right away; otherwise notifications would go to the dead endpoint until the
+// app is next opened and syncs. The request carries the session cookie, so it
+// only succeeds while the user is signed in.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      let sub = event.newSubscription;
+      if (!sub) {
+        let key = event.oldSubscription?.options?.applicationServerKey;
+        if (!key) {
+          const resp = await fetch("/push/key", { credentials: "same-origin" });
+          if (!resp.ok) {
+            return;
+          }
+          const s = (await resp.text()).trim();
+          const b64 = (s + "=".repeat((4 - (s.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+          key = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        }
+        sub = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      }
+      await fetch("/push/subscribe", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub),
+      });
+    })().catch(() => {}),
+  );
+});
+
 // Open the notification's page. An open app window is told to navigate
 // itself: WindowClient.navigate() is unreliable in the iOS Home Screen app
 // and openWindow() does nothing there when the app is already open.

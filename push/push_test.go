@@ -167,6 +167,7 @@ var _ = Describe("Service", func() {
 			Expect(r.URL.Path).NotTo(Equal("/other"))
 			Expect(r.Header.Get("Content-Encoding")).To(Equal("aes128gcm"))
 			Expect(r.Header.Get("TTL")).To(Equal("86400"))
+			Expect(r.Header.Get("Urgency")).To(Equal("high"))
 			Expect(r.Header.Get("Authorization")).To(HavePrefix("vapid t="))
 			Expect(r.Header.Get("Authorization")).To(ContainSubstring(", k=" + s.PublicKey()))
 			Expect(bodies[i]).To(BeNumerically(">", 0))

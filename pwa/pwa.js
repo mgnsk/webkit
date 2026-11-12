@@ -122,14 +122,16 @@
     // sync stores this device's subscription for the signed-in user once per
     // browser session.
     async sync() {
-      if (sessionStorage.getItem(syncedKey)) {
+      const sub = await currentSubscription();
+      if (!sub || Notification.permission !== "granted") {
         return;
       }
-      const sub = await currentSubscription();
-      if (sub && Notification.permission === "granted") {
-        await post("/push/subscribe", sub);
+      // Sync again when the browser rotated the subscription.
+      if (sessionStorage.getItem(syncedKey) === sub.endpoint) {
+        return;
       }
-      sessionStorage.setItem(syncedKey, "1");
+      await post("/push/subscribe", sub);
+      sessionStorage.setItem(syncedKey, sub.endpoint);
     },
 
     // unsubscribe stops notifications for this device, e.g. before signing

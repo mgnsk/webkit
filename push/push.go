@@ -148,7 +148,9 @@ func (s *Service[K]) send(sub *Subscription[K], payload []byte) {
 		VAPIDPublicKey:  s.keys.PublicKey,
 		VAPIDPrivateKey: s.keys.PrivateKey,
 		TTL:             int(s.opts.TTL.Seconds()),
-		Urgency:         webpush.UrgencyNormal,
+		// Below high urgency, Android (FCM) and iOS (APNs) hold notifications
+		// back while the device is idle and deliver them only once it wakes.
+		Urgency: webpush.UrgencyHigh,
 	})
 	if err != nil {
 		log.Warn("error sending push notification", slog.String("error", err.Error()))
