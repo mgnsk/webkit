@@ -121,6 +121,12 @@ func (s *Service[K]) Notify(ctx context.Context, userIDs []K, msg Message) {
 		panic(err)
 	}
 
+	for _, id := range userIDs {
+		if !slices.ContainsFunc(subs, func(sub *Subscription[K]) bool { return sub.UserID == id }) {
+			slog.Debug("user has no push subscriptions", slog.Any("user_id", id))
+		}
+	}
+
 	for _, sub := range subs {
 		// SendNotification appends padding to the message, writing into its
 		// spare capacity, so each send needs its own copy.
@@ -162,8 +168,13 @@ func (s *Service[K]) send(sub *Subscription[K], payload []byte) {
 
 	switch {
 	case resp.StatusCode < 300:
+		log.Debug("push notification sent", slog.Int("status", resp.StatusCode))
 	case resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone:
 		// The user revoked permission or the subscription expired.
+		log.Debug("push subscription expired, deleting it",
+			slog.Int("status", resp.StatusCode),
+			slog.String("body", strings.TrimSpace(string(body))),
+		)
 		if err := s.deleteSubscription(ctx, sub.Endpoint); err != nil {
 			log.Error("error deleting push subscription", slog.String("error", err.Error()))
 		}
