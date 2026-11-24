@@ -4,7 +4,9 @@
 //
 // The service worker shows an offline page for navigations when the network
 // is down, displays notifications sent with the push package and opens their
-// page when tapped. Data is never cached, so pages are never stale.
+// page when tapped. The iOS Home Screen app shows those notifications by
+// itself, as Declarative Web Push messages. Data is never cached, so pages
+// are never stale.
 //
 // The client script registers the service worker, follows notification taps
 // in an open window and exposes the push API as window.webkit.push. Include

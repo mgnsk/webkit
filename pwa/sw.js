@@ -33,8 +33,11 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// Show a push notification. iOS revokes the subscription of apps that
-// receive pushes without showing a notification, so one is always shown.
+// Show a push notification. The push package sends Declarative Web Push
+// messages, which the iOS Home Screen app shows without starting this
+// worker; other browsers deliver them here. iOS revokes the subscription of
+// apps that receive pushes without showing a notification, so one is always
+// shown.
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -42,13 +45,14 @@ self.addEventListener("push", (event) => {
   } catch {
     data = { body: event.data.text() };
   }
+  const n = data.notification || data;
   event.waitUntil(
-    self.registration.showNotification(data.title || config.title, {
-      body: data.body || "",
-      tag: data.tag || undefined,
+    self.registration.showNotification(n.title || config.title, {
+      body: n.body || "",
+      tag: n.tag || undefined,
       icon: config.icon || undefined,
       badge: config.icon || undefined,
-      data: { url: data.url || "/" },
+      data: { url: n.navigate || n.url || "/" },
     }),
   );
 });

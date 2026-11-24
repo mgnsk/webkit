@@ -23,11 +23,17 @@
 // The type of user_id matches the user ID type K of [Service]. The VAPID key
 // pair is generated on first start; changing it invalidates all
 // subscriptions.
+//
+// Notifications are sent as Declarative Web Push messages. iOS and iPadOS
+// 18.4 and later show them from the Home Screen app without starting its
+// service worker. Starting the worker for a push is unreliable there: iOS can
+// hold the push back for hours, until the next push arrives. Other browsers
+// hand the message to the service worker of the pwa package, which shows it.
 package push
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -69,6 +75,11 @@ type Options struct {
 	// Client sends the notifications. Defaults to a client with a 30
 	// second timeout.
 	Client *http.Client
+	// BaseURL is the absolute URL of the app, e.g. https://example.com,
+	// which [Message.URL] is resolved against. Declarative Web Push needs
+	// an absolute URL: without one, iOS shows notifications only through
+	// the service worker.
+	BaseURL string
 }
 
 // Service stores the push subscriptions of users identified by K and sends
@@ -77,6 +88,7 @@ type Service[K comparable] struct {
 	db   bun.IDB
 	keys *VAPIDKeys
 	opts Options
+	base *url.URL
 	wg   sync.WaitGroup
 }
 
@@ -91,12 +103,21 @@ func New[K comparable](ctx context.Context, db bun.IDB, opts Options) (*Service[
 		opts.Client = &http.Client{Timeout: 30 * time.Second}
 	}
 
+	var base *url.URL
+	if opts.BaseURL != "" {
+		u, err := url.Parse(opts.BaseURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return nil, fmt.Errorf("push: invalid base URL %q", opts.BaseURL)
+		}
+		base = u
+	}
+
 	keys, err := getOrCreateKeys(ctx, db, webpush.GenerateVAPIDKeys)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Service[K]{db: db, keys: keys, opts: opts}, nil
+	return &Service[K]{db: db, keys: keys, opts: opts, base: base}, nil
 }
 
 // PublicKey returns the VAPID public key browsers subscribe with.
@@ -116,10 +137,7 @@ func (s *Service[K]) Notify(ctx context.Context, userIDs []K, msg Message) {
 		return
 	}
 
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		panic(err)
-	}
+	payload := s.payload(msg)
 
 	for _, id := range userIDs {
 		if !slices.ContainsFunc(subs, func(sub *Subscription[K]) bool { return sub.UserID == id }) {
